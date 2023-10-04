@@ -1,4 +1,4 @@
-vesion: "3.9"
+version: "3.9"
 services:
   web:
     # Берем Dockerfile из каталога app
@@ -42,10 +42,22 @@ services:
       - 1337:80
     depends_on:
       - web
+  # my-app:
+  #   container_name: my-app
+  #   build:
+  #     context: ./vue_app
+  #     dockerfile: Dockerfile
+  #   volumes:
+  #     - '.:/app'
+  #     - '/app/node_modules'
+  #   ports:
+  #     - '8081:8080'
 
 volumes:
   postgres_volume:
   static_volume:
   media_volume:
-  
+
+
+
   
