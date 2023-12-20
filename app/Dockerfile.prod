@@ -1,21 +1,93 @@
-FROM python:3.8 as builder
+# FROM python:3.8 as builder
 
+# WORKDIR /usr/src/app
+
+# ENV PYTHONDONTWRITEBYTECODE 1
+# ENV PYTHONUNBUFFERED 1
+
+# # установка зависимостей
+# RUN apt-get update \
+#     && apt-get install -y postgresql postgresql-contrib libpq-dev python3-dev
+# RUN pip install --upgrade pip
+
+# # проверка кода через линтер
+# RUN pip install flake8
+# COPY . .
+# RUN flake8 --ignore=E501,F401,E402 /usr/src/app/django_project
+
+# # установка зависимостей
+# COPY ./requirements.txt .
+# RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+
+
+# #########
+# # FINAL #
+# #########
+
+# FROM python:3.8
+
+# # создаем директорию для пользователя
+# RUN mkdir -p /home/app
+
+# # создаем отдельного пользователя
+# # RUN addgroup -S app && adduser -S app -G app
+# RUN addgroup app 
+# RUN useradd -g app app
+
+# # создание каталога для приложения
+# ENV HOME=/home/app
+# ENV APP_HOME=/home/app/web
+# RUN mkdir $APP_HOME
+# RUN mkdir $APP_HOME/static
+# RUN mkdir $APP_HOME/media
+# WORKDIR $APP_HOME
+
+# # установка зависимостей и копирование из builder
+# RUN apt-get update \
+#     && apt-get install -y postgresql postgresql-contrib libpq-dev python3-dev
+# COPY --from=builder /usr/src/app/wheels /wheels
+# COPY --from=builder /usr/src/app/requirements.txt .
+# RUN pip install --no-cache /wheels/*
+
+# # копирование entrypoint-prod.sh
+# COPY ./entrypoint.prod.sh $APP_HOME
+
+# # копирование проекта Django
+# COPY . $APP_HOME
+
+# # изменение прав для пользователя app
+# RUN chown -R app:app $APP_HOME 
+
+# # изменение рабочего пользователя
+# USER app
+
+# # ENTRYPOINT ["/home/app/web/entrypoint.prod.sh"]
+
+###########
+# BUILDER #
+###########
+
+# pull official base image
+FROM python:3.11.4-slim-buster as builder
+
+# set work directory
 WORKDIR /usr/src/app
 
+# set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# установка зависимостей
-RUN apt-get update \
-    && apt-get install -y postgresql postgresql-contrib libpq-dev python3-dev
+# install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc
+
+# lint
 RUN pip install --upgrade pip
+RUN pip install flake8==6.0.0
+COPY . /usr/src/app/
+# RUN flake8 --ignore=E501,F401 .
 
-# проверка кода через линтер
-RUN pip install flake8
-COPY . .
-RUN flake8 --ignore=E501,F401,E402 /usr/src/app/django_project
-
-# установка зависимостей
+# install python dependencies
 COPY ./requirements.txt .
 RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
 
@@ -24,41 +96,43 @@ RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requir
 # FINAL #
 #########
 
-FROM python:3.8
+# pull official base image
+FROM python:3.11.4-slim-buster
 
-# создаем директорию для пользователя
+# create directory for the app user
 RUN mkdir -p /home/app
 
-# создаем отдельного пользователя
-# RUN addgroup -S app && adduser -S app -G app
-RUN addgroup app 
-RUN useradd -g app app
+# create the app user
+RUN addgroup --system app && adduser --system --group app
 
-# создание каталога для приложения
+# create the appropriate directories
 ENV HOME=/home/app
 ENV APP_HOME=/home/app/web
 RUN mkdir $APP_HOME
-RUN mkdir $APP_HOME/static
-RUN mkdir $APP_HOME/media
+RUN mkdir $APP_HOME/staticfiles
+RUN mkdir $APP_HOME/mediafiles
 WORKDIR $APP_HOME
 
-# установка зависимостей и копирование из builder
-RUN apt-get update \
-    && apt-get install -y postgresql postgresql-contrib libpq-dev python3-dev
+# install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends netcat
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
+RUN pip install --upgrade pip
 RUN pip install --no-cache /wheels/*
 
-# копирование entrypoint-prod.sh
-COPY ./entrypoint.prod.sh $APP_HOME
+# copy entrypoint.prod.sh
+COPY ./entrypoint.prod.sh .
+RUN sed -i 's/\r$//g'  $APP_HOME/entrypoint.prod.sh
+RUN chmod +x  $APP_HOME/entrypoint.prod.sh
 
-# копирование проекта Django
+# copy project
 COPY . $APP_HOME
 
-# изменение прав для пользователя app
-RUN chown -R app:app $APP_HOME 
+# chown all the files to the app user
+RUN chown -R app:app $APP_HOME
 
-# изменение рабочего пользователя
+# change to the app user
 USER app
 
-# ENTRYPOINT ["/home/app/web/entrypoint.prod.sh"]
+# run entrypoint.prod.sh
+ENTRYPOINT ["/home/app/web/entrypoint.prod.sh"]
