@@ -10,7 +10,7 @@ services:
     command: gunicorn django_project.wsgi:application --bind 0.0.0.0:8000;
     # Открываем порт 8000 внутри и снаружи
     expose:
-      - 8000
+      - "8000:8000"
       # Подключаем статические и медиа файлы
     volumes:
       - static_volume:/home/app/web/static
@@ -32,19 +32,22 @@ services:
       - postgres_volume:/var/lib/postgresql/data/
     env_file:
       - ./.env.prod.db
-    ports:
-      - ":5432"
+    # ports:
+    #   - ":5432"
   nginx:
     build: ./nginx
     # Подключаем статические и медиа файлы
     volumes:
-      - ./nginx/certs:/etc/ssl/certs
+      # - ./nginx/certs:/etc/ssl/certs
       - static_volume:/home/app/web/static
       - media_volume:/home/app/web/media
     
     ports:
       - "80:80"
       - "443:443"
+      # - "1337:80"
+    links:
+      - web:web
     depends_on:
       - web
   # my-app:

@@ -29,8 +29,9 @@ DEBUG = int(environ.get('DEBUG', default=0))
 ALLOWED_HOSTS = environ.get('ALLOWED_HOSTS').split(' ')
 # ALLOWED_HOSTS = ["*"]
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:1337", "0.0.0.0:5432"]
+# CSRF_TRUSTED_ORIGINS = ["http://localhost:1337", "0.0.0.0:5432"]
 # Application definition
+CSRF_TRUSTED_ORIGINS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -136,4 +137,4 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost:1337']
+
